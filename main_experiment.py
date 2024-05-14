@@ -1,6 +1,6 @@
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+#%%
 from __future__ import print_function
 import argparse
 import time
@@ -67,8 +67,8 @@ parser.add_argument('--max_beta', type=float, default=1., metavar='MB',
                     help='max beta for warm-up')
 parser.add_argument('--min_beta', type=float, default=0.0, metavar='MB',
                     help='min beta for warm-up')
-parser.add_argument('-f', '--flow', type=str, default='no_flow', choices=['planar', 'iaf', 'householder', 'orthogonal',
-                                                                          'triangular', 'no_flow'],
+parser.add_argument('-f', '--flow', type=str, default='my_householder', choices=['planar', 'iaf', 'householder', 'orthogonal',
+                                                                          'triangular', 'no_flow', 'my_householder'],
                     help="""Type of flows to use, no flows can also be selected""")
 parser.add_argument('-nf', '--num_flows', type=int, default=4,
                     metavar='NUM_FLOWS', help='Number of flow layers, ignored in absence of flows')
@@ -87,6 +87,7 @@ parser.add_argument('--gpu_num', type=int, default=0, metavar='GPU', help='choos
 
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+args.cuda = False
 
 if args.manual_seed is None:
     args.manual_seed = random.randint(1, 100000)
@@ -150,6 +151,8 @@ def run(args, kwargs):
         model = VAE.VAE(args)
     elif args.flow == 'planar':
         model = VAE.PlanarVAE(args)
+    elif args.flow == 'my_householder':
+        model = VAE.HouseholderVAE(args)
     elif args.flow == 'iaf':
         model = VAE.IAFVAE(args)
     elif args.flow == 'orthogonal':
@@ -275,4 +278,7 @@ def run(args, kwargs):
 
 if __name__ == "__main__":
 
+    torch.cuda.empty_cache()
+    print("here")
     run(args, kwargs)
+    

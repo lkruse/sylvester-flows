@@ -11,6 +11,48 @@ import torch.nn.functional as F
 
 from models.layers import MaskedConv2d, MaskedLinear
 
+class Householder(nn.Module):
+    """
+    PyTorch implementation of planar flows as presented in "Variational Inference with Normalizing Flows"
+    by Danilo Jimenez Rezende, Shakir Mohamed. Model assumes amortized flow parameters.
+    """
+
+    def __init__(self):
+
+        super(Householder, self).__init__()
+
+    def forward(self, z, w, b, k):
+        """
+        Forward pass. Assumes amortized u, w and b. Conditions on diagonals of u and w for invertibility
+        will be be satisfied inside this function. Computes the following transformation:
+        z' = z + u h( w^T z + b)
+        or actually
+        z'^T = z^T + h(z^T w + b)u^T
+        Assumes the following input shapes:
+        shape u = (batch_size, z_size, 1)
+        shape w = (batch_size, 1, z_size)
+        shape b = (batch_size, 1, 1)
+        shape z = (batch_size, z_size).
+        """
+
+        z = z.unsqueeze(2)
+
+        w_norm_sq = torch.sum(w ** 2, dim=1, keepdim=True)
+        myw = w / w_norm_sq
+        #w = w.transpose(2, 1) / w_norm_sq
+
+        #wTz = torch.bmm(w, z) + b
+        wTz = torch.bmm(myw.transpose(2,1), z) + b
+        mask = torch.ge(wTz, 0)
+        k_ = torch.exp(-2*k)-1 # simplification of -(2*tanh(k)/(1+tanh(k)))
+        zk = z + k_ * torch.bmm(myw, (mask * wTz))
+        logabsdet = (- 2 * k) * mask # simplification of mask*log((1-tanh(k))/(1+tanh(k))
+
+
+        zk = zk.squeeze(2)
+        logabsdet = logabsdet.squeeze(2).squeeze(1)
+        
+        return zk, logabsdet
 
 class Planar(nn.Module):
     """
